@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WareFlow Inventory</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f3f0;color:#1a1a1a;min-height:100vh;}
+  .app{max-width:900px;margin:0 auto;padding:1.5rem 1rem;}
+  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px;}
+  .brand{font-size:20px;font-weight:600;letter-spacing:-0.3px;}
+  .brand span{color:#534AB7;}
+  .tabs{display:flex;gap:4px;background:#e8e6e1;border:1px solid #d4d2cc;border-radius:10px;padding:4px;}
+  .tab{padding:7px 14px;border-radius:7px;font-size:13px;cursor:pointer;color:#666;border:none;background:transparent;font-family:inherit;}
+  .tab.active{background:#fff;color:#1a1a1a;font-weight:500;border:1px solid #d4d2cc;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  .card{background:#fff;border:1px solid #e2e0db;border-radius:12px;padding:1.25rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .card-title{font-size:14px;font-weight:600;margin-bottom:1rem;color:#1a1a1a;}
+  .row{display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;flex-wrap:wrap;}
+  label{display:block;font-size:11px;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;font-weight:500;}
+  input,select{width:100%;padding:8px 10px;border:1px solid #d4d2cc;border-radius:8px;font-size:13px;background:#fff;color:#1a1a1a;outline:none;font-family:inherit;}
+  input:focus,select:focus{border-color:#534AB7;box-shadow:0 0 0 3px rgba(83,74,183,.1);}
+  .btn{padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid #d4d2cc;background:#fff;color:#1a1a1a;white-space:nowrap;font-family:inherit;font-weight:500;}
+  .btn:hover{background:#f4f3f0;}
+  .btn-primary{background:#534AB7;color:#fff;border-color:#534AB7;}
+  .btn-primary:hover{background:#4740a3;}
+  .btn-danger{background:#fff5f5;color:#791F1F;border-color:#f0c0c0;}
+  .btn-danger:hover{background:#fee2e2;}
+  .btn-success{background:#EAF3DE;color:#27500A;border-color:#97C459;font-weight:600;}
+  .btn-success:hover{background:#d8eccc;}
+  .btn-sm{padding:4px 10px;font-size:11px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;padding:7px 10px;font-size:11px;color:#999;font-weight:500;border-bottom:1px solid #f0eeea;text-transform:uppercase;letter-spacing:.05em;}
+  td{padding:9px 10px;border-bottom:1px solid #f0eeea;color:#1a1a1a;vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:#fafaf8;}
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+  .pill-ok{background:#EAF3DE;color:#27500A;}
+  .pill-low{background:#FCEBEB;color:#791F1F;}
+  .pill-warn{background:#FAEEDA;color:#633806;}
+  .godown-tag{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;background:#EEEDFE;color:#3C3489;font-weight:600;}
+  .empty{text-align:center;color:#aaa;font-size:13px;padding:2.5rem;}
+  .slip-items{background:#f8f7f4;border-radius:8px;padding:10px;margin-bottom:10px;border:1px solid #ede9e3;}
+  .slip-item-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #ede9e3;}
+  .slip-item-row:last-child{border-bottom:none;}
+  .metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem;}
+  .metric{background:#fff;border:1px solid #e2e0db;border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .metric-label{font-size:11px;color:#999;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;font-weight:500;}
+  .metric-val{font-size:24px;font-weight:600;}
+  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#534AB7;color:#fff;padding:11px 20px;border-radius:10px;font-size:13px;z-index:999;animation:fadeIn .2s;box-shadow:0 4px 12px rgba(83,74,183,.3);}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .divider{border:none;border-top:1px solid #f0eeea;margin:14px 0;}
+  .godown-section{margin-bottom:1.5rem;}
+  .godown-header{display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f8f7f4;border-radius:8px;margin-bottom:6px;border:1px solid #ede9e3;}
+  .godown-count{font-size:12px;color:#999;}
+  .slip-header{display:flex;justify-content:space-between;align-items:flex-start;}
+  .slip-id{font-size:11px;color:#aaa;font-family:monospace;margin-top:2px;}
+  .flex-between{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .godown-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+  .filter-btn{padding:5px 13px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid #d4d2cc;background:#fff;color:#666;font-family:inherit;font-weight:500;}
+  .filter-btn:hover{background:#f4f3f0;}
+  .filter-btn.active{background:#EEEDFE;color:#3C3489;border-color:#AFA9EC;font-weight:600;}
+  .section-label{font-size:11px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.06em;padding:6px 0 4px;border-bottom:1px solid #ede9e3;margin-bottom:6px;}
+  .search-wrap{position:relative;margin-bottom:12px;}
+  .search-wrap input{padding-left:32px;}
+  .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#aaa;font-size:14px;pointer-events:none;}
+  .autocomplete{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #d4d2cc;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:100;max-height:220px;overflow-y:auto;margin-top:2px;}
+  .autocomplete-item{padding:9px 12px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f4f3f0;}
+  .autocomplete-item:last-child{border-bottom:none;}
+  .autocomplete-item:hover{background:#f4f3f0;}
+  .autocomplete-item.highlighted{background:#EEEDFE;}
+  .autocomplete-meta{font-size:11px;color:#aaa;}
+  .edit-inline{display:flex;align-items:center;gap:6px;}
+  .td-actions{display:flex;gap:5px;align-items:center;}
+  @media(max-width:600px){
+    .tabs{flex-wrap:wrap;}
+    .metric-grid{grid-template-columns:repeat(2,1fr);}
+    .row{flex-direction:column;}
+    .row .btn{width:100%;}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const {useState, useEffect, useRef} = React;
+
+function save(key, val) { try { localStorage.setItem('wf_' + key, JSON.stringify(val)); } catch(e) {} }
+function load(key, def) { try { const v = localStorage.getItem('wf_' + key); return v ? JSON.parse(v) : def; } catch(e) { return def; } }
+
+function Toast({msg, onDone}) {
+  useEffect(() => { const t = setTimeout(onDone, 2200); return () => clearTimeout(t); }, []);
+  return React.createElement('div', {className: 'toast'}, msg);
+}
+
+function App() {
+  const [tab, setTab] = useState('dispatch');
+  const [godowns, setGodowns] = useState(() => load('godowns', []));
+  const [items, setItems] = useState(() => load('items', []));
+  const [slips, setSlips] = useState(() => load('slips', []));
+  const [toast, setToast] = useState(null);
+  const notify = msg => setToast(msg);
+  useEffect(() => save('godowns', godowns), [godowns]);
+  useEffect(() => save('items', items), [items]);
+  useEffect(() => save('slips', slips), [slips]);
+
+  const tabs = ['dispatch', 'replenish', 'inventory', 'history'];
+  const labels = {dispatch: 'Dispatch Slip', replenish: 'Replenish Stock', inventory: 'Inventory', history: 'Slip History'};
+
+  return React.createElement('div', {className: 'app'},
+    React.createElement('div', {className: 'header'},
+      React.createElement('div', {className: 'brand'}, React.createElement('span', null, 'WareFlow'), ' Inventory'),
+      React.createElement('div', {className: 'tabs'}, tabs.map(t =>
+        React.createElement('button', {key: t, className: 'tab' + (tab === t ? ' active' : ''), onClick: () => setTab(t)}, labels[t])
+      ))
+    ),
+    tab === 'dispatch'  && React.createElement(DispatchTab,  {items, setItems, godowns, slips, setSlips, notify}),
+    tab === 'replenish' && React.createElement(ReplenishTab, {items, setItems, godowns, setGodowns, notify}),
+    tab === 'inventory' && React.createElement(InventoryTab, {items, setItems, godowns, notify}),
+    tab === 'history'   && React.createElement(HistoryTab,   {slips}),
+    toast && React.createElement(Toast, {msg: toast, onDone: () => setToast(null)})
+  );
+}
+
+/* ── DISPATCH TAB ── */
+function DispatchTab({items, setItems, godowns, slips, setSlips, notify}) {
+  const [party, setParty] = useState('');
+  const [search, setSearch] = useState('');
+  const [showDrop, setShowDrop] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [qty, setQty] = useState('');
+  const [selItem, setSelItem] = useState(null);
+  const [lines, setLines] = useState([]);
+  const searchRef = useRef();
+  const qtyRef = useRef();
+  const dropRef = useRef();
+
+
+  const availItems = items.filter(i => i.stock > 0);
+  const filtered = search.trim().length > 0
+    ? availItems.filter(i => i.name.toLowerCase().includes(search.toLowerCase()))
+    : availItems;
+
+  const selectItem = item => {
+    setSelItem(item);
+    setSearch(item.name);
+    setShowDrop(false);
+    setHighlightedIndex(-1);
+    setQty('');
+    setTimeout(() => { if (qtyRef.current) qtyRef.current.focus(); }, 50);
+  };
+
+  const handleSearchKeyDown = e => {
+    if (!showDrop || filtered.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const next = (highlightedIndex + 1) % filtered.length;
+      setHighlightedIndex(next);
+      // scroll into view
+      if (dropRef.current) {
+        const el = dropRef.current.children[next];
+        if (el) el.scrollIntoView({block: 'nearest'});
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prev = highlightedIndex <= 0 ? filtered.length - 1 : highlightedIndex - 1;
+      setHighlightedIndex(prev);
+      if (dropRef.current) {
+        const el = dropRef.current.children[prev];
+        if (el) el.scrollIntoView({block: 'nearest'});
+      }
+    } else if (e.key === 'Enter') {
+      if (highlightedIndex >= 0 && filtered[highlightedIndex]) {
+        e.preventDefault();
+        selectItem(filtered[highlightedIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setShowDrop(false);
+      setHighlightedIndex(-1);
+    }
+  };
+
+  const addLine = () => {
+    if (!selItem || !qty || Number(qty) <= 0) return;
+    const item = items.find(i => i.id === selItem.id);
+    if (!item) return;
+    if (Number(qty) > item.stock) { notify('Quantity exceeds available stock!'); return; }
+    const existing = lines.find(l => l.itemId === selItem.id);
+    if (existing) {
+      const nq = existing.qty + Number(qty);
+      if (nq > item.stock) { notify('Total quantity exceeds stock!'); return; }
+      setLines(lines.map(l => l.itemId === selItem.id ? {...l, qty: nq} : l));
+    } else {
+      const gd = godowns.find(g => g.id === item.godownId);
+      setLines([...lines, {itemId: item.id, name: item.name, qty: Number(qty), godownId: item.godownId, godownName: gd ? gd.name : '—'}]);
+    }
+    setSelItem(null); setSearch(''); setQty(''); setShowDrop(false); setHighlightedIndex(-1);
+    setTimeout(() => { if (searchRef.current) searchRef.current.focus(); }, 50);
+  };
+
+  const removeLine = id => setLines(lines.filter(l => l.itemId !== id));
+
+  const confirm = () => {
+    if (!party.trim() || lines.length === 0) return;
+    const slip = {id: 'SLP-' + Date.now(), party: party.trim(), lines, date: new Date().toLocaleString(), status: 'dispatched'};
+    setSlips(s => [slip, ...s]);
+    setItems(prev => prev.map(i => {
+      const line = lines.find(l => l.itemId === i.id);
+      return line ? {...i, stock: i.stock - line.qty} : i;
+    }));
+    setParty(''); setLines([]); setSelItem(null); setSearch(''); setQty('');
+    notify('Slip confirmed — stock updated!');
+  };
+
+  const byGodown = lines.reduce((acc, l) => {
+    const k = l.godownName; if (!acc[k]) acc[k] = []; acc[k].push(l); return acc;
+  }, {});
+
+  return React.createElement('div', null,
+    React.createElement('div', {className: 'card'},
+      React.createElement('div', {className: 'card-title'}, 'Party details'),
+      React.createElement('label', null, 'Party / Customer name'),
+      React.createElement('input', {value: party, onChange: e => setParty(e.target.value), placeholder: 'e.g. Sharma Traders'})
+    ),
+    React.createElement('div', {className: 'card'},
+      React.createElement('div', {className: 'card-title'}, 'Add items to slip'),
+      items.filter(i => i.stock > 0).length === 0
+        ? React.createElement('div', {className: 'empty'}, 'No stock available. Replenish items first.')
+        : React.createElement('div', null,
+          React.createElement('div', {className: 'row'},
+            React.createElement('div', {style: {flex: 3, minWidth: 180, position: 'relative'}},
+              React.createElement('label', null, 'Search item'),
+              React.createElement('div', {className: 'search-wrap', style: {marginBottom: 0}},
+                React.createElement('span', {className: 'search-icon'}, '🔍'),
+                React.createElement('input', {
+                  ref: searchRef,
+                  value: search,
+                  onChange: e => { setSearch(e.target.value); setShowDrop(true); setSelItem(null); setHighlightedIndex(-1); },
+                  onFocus: () => setShowDrop(true),
+                  onBlur: () => setTimeout(() => setShowDrop(false), 150),
+                  onKeyDown: handleSearchKeyDown,
+                  placeholder: 'Type product name...'
+                })
+              ),
+              showDrop && filtered.length > 0 && React.createElement('div', {className: 'autocomplete', ref: dropRef},
+                filtered.map((i, idx) => {
+                  const gd = godowns.find(g => g.id === i.godownId);
+                  return React.createElement('div', {key: i.id, className: 'autocomplete-item' + (idx === highlightedIndex ? ' highlighted' : ''), onMouseDown: () => selectItem(i)},
+                    React.createElement('span', null, i.name),
+                    React.createElement('span', {className: 'autocomplete-meta'}, (gd ? gd.name + ' · ' : '') + i.stock + ' avail.')
+                  );
+                })
+              )
+            ),
+            React.createElement('div', {style: {flex: 1, minWidth: 80}},
+              React.createElement('label', null, 'Qty'),
+              React.createElement('input', {
+                ref: qtyRef,
+                type: 'number', min: 1, value: qty,
+                onChange: e => setQty(e.target.value),
+                placeholder: '0', disabled: !selItem,
+                onKeyDown: e => { if (e.key === 'Enter') addLine(); }
+              })
+            ),
+            selItem && React.createElement('div', {style: {flex: 1, minWidth: 100, paddingBottom: 1}},
+              React.createElement('label', null, 'Godown'),
+              React.createElement('div', {style: {padding: '8px 10px', background: '#EEEDFE', borderRadius: 8, fontSize: 12, color: '#3C3489', fontWeight: 600}},
+                godowns.find(g => g.id === selItem.godownId) ? godowns.find(g => g.id === selItem.godownId).name : '—'
+              )
+            ),
+            React.createElement('button', {className: 'btn btn-primary', onClick: addLine, disabled: !selItem || !qty}, 'Add')
+          ),
+          lines.length > 0 && React.createElement('div', null,
+            React.createElement('hr', {className: 'divider'}),
+            React.createElement('div', {className: 'card-title'}, 'Slip for: ' + (party || '—')),
+            React.createElement('div', {className: 'slip-items'},
+              Object.entries(byGodown).map(([gdName, gdLines]) =>
+                React.createElement('div', {key: gdName},
+                  React.createElement('div', {className: 'section-label'}, gdName),
+                  gdLines.map(l => React.createElement('div', {key: l.itemId, className: 'slip-item-row'},
+                    React.createElement('span', null, l.name),
+                    React.createElement('div', {style: {display: 'flex', alignItems: 'center', gap: 8}},
+                      React.createElement('span', {style: {fontWeight: 600}}, '× ' + l.qty),
+                      React.createElement('button', {className: 'btn btn-danger', style: {padding: '2px 8px', fontSize: 11}, onClick: () => removeLine(l.itemId)}, '✕')
+                    )
+                  ))
+                )
+              )
+            ),
+            React.createElement('button', {
+              className: 'btn btn-success', style: {width: '100%', padding: 11},
+              disabled: !party.trim(), onClick: confirm
+            }, '✓ Confirm & Dispatch — Stock will auto-deduct')
+          )
+        )
+    )
+  );
+}
+
+/* ── REPLENISH TAB ── */
+function ReplenishTab({items, setItems, godowns, setGodowns, notify}) {
+  const [gdName, setGdName] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newGodown, setNewGodown] = useState('');
+  const [newStock, setNewStock] = useState('');
+  const [selItem, setSelItem] = useState('');
+  const [selGodown, setSelGodown] = useState('');
+  const [qty, setQty] = useState('');
+
+  const addGodown = () => {
+    if (!gdName.trim()) return;
+    if (godowns.find(g => g.name.toLowerCase() === gdName.trim().toLowerCase())) { notify('Godown already exists!'); return; }
+    setGodowns(prev => [...prev, {id: 'gd_' + Date.now(), name: gdName.trim()}]);
+    notify('Godown "' + gdName.trim() + '" added!');
+    setGdName('');
+  };
+
+  const addItem = () => {
+    if (!newName.trim() || !newGodown) return;
+    setItems(prev => [...prev, {id: 'itm_' + Date.now(), name: newName.trim(), godownId: newGodown, stock: Number(newStock) || 0}]);
+    notify('"' + newName.trim() + '" added!');
+    setNewName(''); setNewStock('');
+  };
+
+  const replenish = () => {
+    if (!selItem || !qty || Number(qty) <= 0) return;
+    setItems(prev => prev.map(i => i.id === selItem ? {...i, stock: i.stock + Number(qty)} : i));
+    notify('Stock replenished!');
+    setSelItem(''); setQty('');
+  };
+
+  const filteredItems = selGodown ? items.filter(i => i.godownId === selGodown) : items;
+
+  return React.createElement('div', null,
+    React.createElement('div', {className: 'card'},
+      React.createElement('div', {className: 'card-title'}, 'Add godown'),
+      React.createElement('div', {className: 'row'},
+        React.createElement('div', {style: {flex: 1}},
+          React.createElement('label', null, 'Godown name'),
+          React.createElement('input', {value: gdName, onChange: e => setGdName(e.target.value), placeholder: 'e.g. Godown A, Main Store...', onKeyDown: e => e.key === 'Enter' && addGodown()})
+        ),
+        React.createElement('button', {className: 'btn btn-primary', onClick: addGodown}, 'Add Godown')
+      ),
+      godowns.length > 0 && React.createElement('div', {style: {display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8}},
+        godowns.map(g => React.createElement('span', {key: g.id, className: 'godown-tag'}, g.name))
+      )
+    ),
+    React.createElement('div', {className: 'card'},
+      React.createElement('div', {className: 'card-title'}, 'Add new item'),
+      godowns.length === 0
+        ? React.createElement('div', {className: 'empty'}, 'Add a godown first before adding items.')
+        : React.createElement('div', {className: 'row'},
+          React.createElement('div', {style: {flex: 2, minWidth: 140}},
+            React.createElement('label', null, 'Item name'),
+            React.createElement('input', {value: newName, onChange: e => setNewName(e.target.value), placeholder: 'e.g. Cardboard Box 50×40cm'})
+          ),
+          React.createElement('div', {style: {flex: 1, minWidth: 120}},
+            React.createElement('label', null, 'Godown'),
+            React.createElement('select', {value: newGodown, onChange: e => setNewGodown(e.target.value)},
+              React.createElement('option', {value: ''}, 'Select...'),
+              godowns.map(g => React.createElement('option', {key: g.id, value: g.id}, g.name))
+            )
+          ),
+          React.createElement('div', {style: {flex: 1, minWidth: 80}},
+            React.createElement('label', null, 'Opening stock'),
+            React.createElement('input', {type: 'number', min: 0, value: newStock, onChange: e => setNewStock(e.target.value), placeholder: '0'})
+          ),
+          React.createElement('button', {className: 'btn btn-primary', onClick: addItem}, 'Add Item')
+        )
+    ),
+    React.createElement('div', {className: 'card'},
+      React.createElement('div', {className: 'card-title'}, 'Replenish existing item'),
+      items.length === 0
+        ? React.createElement('div', {className: 'empty'}, 'No items yet.')
+        : React.createElement('div', {className: 'row'},
+          React.createElement('div', {style: {flex: 1, minWidth: 120}},
+            React.createElement('label', null, 'Filter by godown'),
+            React.createElement('select', {value: selGodown, onChange: e => { setSelGodown(e.target.value); setSelItem(''); }},
+              React.createElement('option', {value: ''}, 'All godowns'),
+              godowns.map(g => React.createElement('option', {key: g.id, value: g.id}, g.name))
+            )
+          ),
+          React.createElement('div', {style: {flex: 2, minWidth: 140}},
+            React.createElement('label', null, 'Item'),
+            React.createElement('select', {value: selItem, onChange: e => setSelItem(e.target.value)},
+              React.createElement('option', {value: ''}, 'Select item...'),
+              filteredItems.map(i => {
+                const gd = godowns.find(g => g.id === i.godownId);
+                return React.createElement('option', {key: i.id, value: i.id}, i.name + ' (' + i.stock + ' in stock)' + (gd ? ' — ' + gd.name : ''));
+              })
+            )
+          ),
+          React.createElement('div', {style: {flex: 1, minWidth: 80}},
+            React.createElement('label', null, 'Qty to add'),
+            React.createElement('input', {type: 'number', min: 1, value: qty, onChange: e => setQty(e.target.value), placeholder: '0'})
+          ),
+          React.createElement('button', {className: 'btn btn-success', onClick: replenish}, '+ Add Stock')
+        )
+    )
+  );
+}
+
+/* ── INVENTORY TAB ── */
+function InventoryTab({items, setItems, godowns, notify}) {
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [editId, setEditId] = useState(null);
+  const [editGodown, setEditGodown] = useState('');
+  const [editMode, setEditMode] = useState('');
+  const [editName, setEditName] = useState('');
+
+  const total = items.reduce((s, i) => s + i.stock, 0);
+  const low = items.filter(i => i.stock > 0 && i.stock < 10).length;
+  const oos = items.filter(i => i.stock === 0).length;
+
+  const exportToExcel = () => {
+    if (items.length === 0) { notify('No inventory to export!'); return; }
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: All inventory sorted by godown
+    const allRows = [];
+    const sortedGodowns = [...godowns];
+    sortedGodowns.forEach(g => {
+      const gItems = items.filter(i => i.godownId === g.id);
+      if (gItems.length === 0) return;
+      gItems.forEach(i => {
+        const status = i.stock === 0 ? 'Out of Stock' : i.stock < 10 ? 'Low Stock' : 'In Stock';
+        allRows.push({'Godown': g.name, 'Item Name': i.name, 'Stock': i.stock, 'Status': status});
+      });
+    });
+    const ws = XLSX.utils.json_to_sheet(allRows);
+    ws['!cols'] = [{wch: 20}, {wch: 35}, {wch: 12}, {wch: 16}];
+    XLSX.utils.book_append_sheet(wb, ws, 'All Inventory');
+
+    // One sheet per godown
+    sortedGodowns.forEach(g => {
+      const gItems = items.filter(i => i.godownId === g.id);
+      if (gItems.length === 0) return;
+      const rows = gItems.map(i => ({
+        'Item Name': i.name,
+        'Stock': i.stock,
+        'Status': i.stock === 0 ? 'Out of Stock' : i.stock < 10 ? 'Low Stock' : 'In Stock'
+      }));
+      const gws = XLSX.utils.json_to_sheet(rows);
+      gws['!cols'] = [{wch: 35}, {wch: 12}, {wch: 16}];
+      // Truncate sheet name to 31 chars (Excel limit)
+      XLSX.utils.book_append_sheet(wb, gws, g.name.slice(0, 31));
+    });
+
+    const date = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, 'WareFlow_Inventory_' + date + '.xlsx');
+    notify('Inventory exported!');
+  };
+
+  const fileInputRef = useRef();
+
+  const importFromExcel = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const wb = XLSX.read(evt.target.result, {type: 'binary'});
+        // Read "All Inventory" sheet, or fall back to first sheet
+        const sheetName = wb.SheetNames.includes('All Inventory') ? 'All Inventory' : wb.SheetNames[0];
+        const ws = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws);
+
+        if (rows.length === 0) { notify('No data found in file!'); return; }
+
+        // Validate columns — need at least "Item Name" and "Stock"
+        const sample = rows[0];
+        if (!('Item Name' in sample) || !('Stock' in sample)) {
+          notify('Invalid file — needs "Item Name" and "Stock" columns.');
+          e.target.value = '';
+          return;
+        }
+
+        let updated = 0, added = 0, skipped = 0;
+
+        setItems(prevItems => {
+          let newItems = [...prevItems];
+          rows.forEach(row => {
+            const name = (row['Item Name'] || '').toString().trim();
+            const stock = parseInt(row['Stock'], 10);
+            const godownName = (row['Godown'] || '').toString().trim();
+            if (!name || isNaN(stock) || stock < 0) { skipped++; return; }
+
+            const existing = newItems.find(i => i.name.toLowerCase() === name.toLowerCase());
+            if (existing) {
+              newItems = newItems.map(i => i.name.toLowerCase() === name.toLowerCase() ? {...i, stock} : i);
+              updated++;
+            } else {
+              // Find or create godown
+              let godownId = '';
+              if (godownName) {
+                const gd = godowns.find(g => g.name.toLowerCase() === godownName.toLowerCase());
+                if (gd) godownId = gd.id;
+              }
+              // If no godown matched, use first available godown
+              if (!godownId && godowns.length > 0) godownId = godowns[0].id;
+              if (!godownId) { skipped++; return; }
+              newItems.push({id: 'itm_' + Date.now() + '_' + Math.random().toString(36).slice(2), name, godownId, stock});
+              added++;
+            }
+          });
+          return newItems;
+        });
+
+        setTimeout(() => {
+          notify(`Import done — ${updated} updated, ${added} added${skipped > 0 ? ', ' + skipped + ' skipped' : ''}`);
+        }, 100);
+
+      } catch(err) {
+        notify('Error reading file. Please use the exported format.');
+      }
+      e.target.value = '';
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const deleteItem = id => {
+    if (!window.confirm('Delete this item?')) return;
+    setItems(prev => prev.filter(i => i.id !== id));
+    notify('Item deleted.');
+  };
+
+  const startEdit = (item, mode) => { setEditId(item.id); setEditMode(mode); setEditGodown(item.godownId); setEditName(item.name); };
+  const saveEdit = id => {
+    if (editMode === 'godown') {
+      if (!editGodown) return;
+      setItems(prev => prev.map(i => i.id === id ? {...i, godownId: editGodown} : i));
+      notify('Godown updated!');
+    } else if (editMode === 'name') {
+      if (!editName.trim()) return;
+      setItems(prev => prev.map(i => i.id === id ? {...i, name: editName.trim()} : i));
+      notify('Item renamed!');
+    }
+    setEditId(null); setEditMode('');
+  };
+
+  const statusPill = s => {
+    if (s === 0) return React.createElement('span', {className: 'pill pill-low'}, 'Out of stock');
+    if (s < 10) return React.createElement('span', {className: 'pill pill-warn'}, 'Low');
+    return React.createElement('span', {className: 'pill pill-ok'}, 'In stock');
+  };
+
+  // Filter by godown tab + search
+  const searchLower = search.toLowerCase();
+  const getDisplayItems = (godownId) => {
+    let list = items.filter(i => i.godownId === godownId);
+    if (searchLower) list = list.filter(i => i.name.toLowerCase().includes(searchLower));
+    return list;
+  };
+
+  // When searching across all, show flat list
+  const allFiltered = searchLower ? items.filter(i => i.name.toLowerCase().includes(searchLower)) : null;
+  const displayGodowns = filter === 'all' ? godowns : godowns.filter(g => g.id === filter);
+
+  return React.createElement('div', null,
+    React.createElement('div', {className: 'metric-grid'},
+      React.createElement('div', {className: 'metric'}, React.createElement('div', {className: 'metric-label'}, 'Total SKUs'), React.createElement('div', {className: 'metric-val'}, items.length)),
+      React.createElement('div', {className: 'metric'}, React.createElement('div', {className: 'metric-label'}, 'Total units'), React.createElement('div', {className: 'metric-val'}, total.toLocaleString())),
+      React.createElement('div', {className: 'metric'}, React.createElement('div', {className: 'metric-label'}, 'Low / Out of stock'), React.createElement('div', {className: 'metric-val', style: {color: low + oos > 0 ? '#BA7517' : 'inherit'}}, low + oos))
+    ),
+    React.createElement('div', {className: 'card'},
+      React.createElement('div', {className: 'flex-between'},
+        React.createElement('div', {className: 'card-title', style: {marginBottom: 0}}, 'Stock by godown'),
+        React.createElement('div', {style: {display: 'flex', gap: 8}},
+          React.createElement('input', {
+            ref: fileInputRef, type: 'file', accept: '.xlsx,.xls',
+            style: {display: 'none'}, onChange: importFromExcel
+          }),
+          React.createElement('button', {
+            className: 'btn',
+            style: {fontSize: 12, padding: '6px 14px', color: '#27500A', borderColor: '#97C459', background: '#EAF3DE'},
+            onClick: () => fileInputRef.current && fileInputRef.current.click()
+          }, '⬆ Import from Excel'),
+          React.createElement('button', {
+            className: 'btn btn-primary',
+            style: {fontSize: 12, padding: '6px 14px'},
+            onClick: exportToExcel
+          }, '⬇ Export to Excel')
+        )
+      ),
+      // Search bar
+      React.createElement('div', {className: 'search-wrap'},
+        React.createElement('span', {className: 'search-icon'}, '🔍'),
+        React.createElement('input', {value: search, onChange: e => setSearch(e.target.value), placeholder: 'Search any product by name...'})
+      ),
+      // Godown filter pills (hidden when searching)
+      !searchLower && React.createElement('div', {className: 'godown-filter'},
+        React.createElement('button', {className: 'filter-btn' + (filter === 'all' ? ' active' : ''), onClick: () => setFilter('all')}, 'All godowns'),
+        godowns.map(g => React.createElement('button', {key: g.id, className: 'filter-btn' + (filter === g.id ? ' active' : ''), onClick: () => setFilter(g.id)}, g.name))
+      ),
+      items.length === 0
+        ? React.createElement('div', {className: 'empty'}, 'No items yet. Go to Replenish Stock to add godowns and items.')
+        // Search results — flat list across all godowns
+        : searchLower
+          ? React.createElement('div', null,
+              allFiltered.length === 0
+                ? React.createElement('div', {className: 'empty'}, 'No items found matching "' + search + '"')
+                : React.createElement('table', null,
+                  React.createElement('thead', null, React.createElement('tr', null,
+                    React.createElement('th', null, 'Item name'),
+                    React.createElement('th', null, 'Godown'),
+                    React.createElement('th', null, 'Stock'),
+                    React.createElement('th', null, 'Status'),
+                    React.createElement('th', null, '')
+                  )),
+                  React.createElement('tbody', null,
+                    allFiltered.map(i => {
+                      const gd = godowns.find(g => g.id === i.godownId);
+                      return React.createElement('tr', {key: i.id},
+                        React.createElement('td', null,
+                          editId === i.id && editMode === 'name'
+                            ? React.createElement('div', {className: 'edit-inline'},
+                                React.createElement('input', {value: editName, onChange: e => setEditName(e.target.value), style: {minWidth: 140}, onKeyDown: e => e.key === 'Enter' && saveEdit(i.id)}),
+                                React.createElement('button', {className: 'btn btn-success btn-sm', onClick: () => saveEdit(i.id)}, '✓'),
+                                React.createElement('button', {className: 'btn btn-sm', onClick: () => setEditId(null)}, '✕')
+                              )
+                            : i.name
+                        ),
+                        React.createElement('td', null,
+                          editId === i.id && editMode === 'godown'
+                            ? React.createElement('div', {className: 'edit-inline'},
+                                React.createElement('select', {value: editGodown, onChange: e => setEditGodown(e.target.value), style: {width: 'auto'}},
+                                  godowns.map(g => React.createElement('option', {key: g.id, value: g.id}, g.name))
+                                ),
+                                React.createElement('button', {className: 'btn btn-success btn-sm', onClick: () => saveEdit(i.id)}, '✓'),
+                                React.createElement('button', {className: 'btn btn-sm', onClick: () => setEditId(null)}, '✕')
+                              )
+                            : React.createElement('span', {className: 'godown-tag'}, gd ? gd.name : '—')
+                        ),
+                        React.createElement('td', {style: {fontWeight: 600}}, i.stock.toLocaleString()),
+                        React.createElement('td', null, statusPill(i.stock)),
+                        React.createElement('td', null,
+                          React.createElement('div', {className: 'td-actions'},
+                            React.createElement('button', {className: 'btn btn-sm', style: {color: '#534AB7', borderColor: '#AFA9EC'}, onClick: () => startEdit(i, 'name')}, 'Rename'),
+                            React.createElement('button', {className: 'btn btn-sm', style: {color: '#534AB7', borderColor: '#AFA9EC'}, onClick: () => startEdit(i, 'godown')}, 'Edit Godown'),
+                            React.createElement('button', {className: 'btn btn-danger btn-sm', onClick: () => deleteItem(i.id)}, 'Delete')
+                          )
+                        )
+                      );
+                    })
+                  )
+                )
+            )
+          // Godown grouped view
+          : displayGodowns.map(g => {
+            const gItems = getDisplayItems(g.id);
+            if (gItems.length === 0) return null;
+            const gTotal = gItems.reduce((s, i) => s + i.stock, 0);
+            return React.createElement('div', {key: g.id, className: 'godown-section'},
+              React.createElement('div', {className: 'godown-header'},
+                React.createElement('span', {className: 'godown-tag'}, g.name),
+                React.createElement('span', {className: 'godown-count'}, gItems.length + ' items · ' + gTotal.toLocaleString() + ' units total')
+              ),
+              React.createElement('table', null,
+                React.createElement('thead', null, React.createElement('tr', null,
+                  React.createElement('th', null, 'Item name'),
+                  React.createElement('th', null, 'Stock'),
+                  React.createElement('th', null, 'Status'),
+                  React.createElement('th', null, '')
+                )),
+                React.createElement('tbody', null,
+                  [...gItems].sort((a, b) => a.stock - b.stock).map(i =>
+                    React.createElement('tr', {key: i.id},
+                      React.createElement('td', null,
+                        editId === i.id && editMode === 'name'
+                          ? React.createElement('div', {className: 'edit-inline'},
+                              React.createElement('input', {value: editName, onChange: e => setEditName(e.target.value), style: {minWidth: 140}, onKeyDown: e => e.key === 'Enter' && saveEdit(i.id)}),
+                              React.createElement('button', {className: 'btn btn-success btn-sm', onClick: () => saveEdit(i.id)}, '✓'),
+                              React.createElement('button', {className: 'btn btn-sm', onClick: () => setEditId(null)}, '✕')
+                            )
+                          : i.name
+                      ),
+                      React.createElement('td', null,
+                        editId === i.id && editMode === 'godown'
+                          ? React.createElement('div', {className: 'edit-inline'},
+                              React.createElement('select', {value: editGodown, onChange: e => setEditGodown(e.target.value), style: {width: 'auto'}},
+                                godowns.map(g2 => React.createElement('option', {key: g2.id, value: g2.id}, g2.name))
+                              ),
+                              React.createElement('button', {className: 'btn btn-success btn-sm', onClick: () => saveEdit(i.id)}, '✓'),
+                              React.createElement('button', {className: 'btn btn-sm', onClick: () => setEditId(null)}, '✕')
+                            )
+                          : React.createElement('span', {style: {fontSize: 12, color: '#aaa'}}, '—')
+                      ),
+                      React.createElement('td', {style: {fontWeight: 600}}, i.stock.toLocaleString()),
+                      React.createElement('td', null, statusPill(i.stock)),
+                      React.createElement('td', null,
+                        React.createElement('div', {className: 'td-actions'},
+                          React.createElement('button', {className: 'btn btn-sm', style: {color: '#534AB7', borderColor: '#AFA9EC'}, onClick: () => startEdit(i, 'name')}, 'Rename'),
+                          React.createElement('button', {className: 'btn btn-sm', style: {color: '#534AB7', borderColor: '#AFA9EC'}, onClick: () => startEdit(i, 'godown')}, 'Edit Godown'),
+                          React.createElement('button', {className: 'btn btn-danger btn-sm', onClick: () => deleteItem(i.id)}, 'Delete')
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            );
+          })
+    )
+  );
+}
+
+/* ── HISTORY TAB ── */
+function HistoryTab({slips}) {
+  return React.createElement('div', null,
+    React.createElement('div', {className: 'card'},
+      React.createElement('div', {className: 'flex-between'},
+        React.createElement('div', {className: 'card-title', style: {marginBottom: 0}}, 'Dispatch history'),
+        React.createElement('span', {style: {fontSize: 12, color: '#aaa'}}, slips.length + ' slips total')
+      ),
+      slips.length === 0
+        ? React.createElement('div', {className: 'empty', style: {marginTop: 12}}, 'No slips dispatched yet.')
+        : slips.map(s => {
+          const byGodown = s.lines.reduce((acc, l) => {
+            const k = l.godownName || '—'; if (!acc[k]) acc[k] = []; acc[k].push(l); return acc;
+          }, {});
+          return React.createElement('div', {key: s.id, style: {borderTop: '1px solid #f0eeea', paddingTop: 14, marginTop: 14}},
+            React.createElement('div', {className: 'slip-header'},
+              React.createElement('div', null,
+                React.createElement('div', {style: {fontWeight: 600, fontSize: 14}}, s.party),
+                React.createElement('div', {className: 'slip-id'}, s.id + ' · ' + s.date)
+              ),
+              React.createElement('span', {className: 'pill pill-ok'}, 'Dispatched')
+            ),
+            React.createElement('div', {className: 'slip-items', style: {marginTop: 10}},
+              Object.entries(byGodown).map(([gdName, lines]) =>
+                React.createElement('div', {key: gdName},
+                  React.createElement('div', {className: 'section-label'}, gdName),
+                  lines.map(l => React.createElement('div', {key: l.itemId, className: 'slip-item-row'},
+                    React.createElement('span', {style: {color: '#555'}}, l.name),
+                    React.createElement('span', {style: {fontWeight: 600}}, '× ' + l.qty)
+                  ))
+                )
+              )
+            )
+          );
+        })
+    )
+  );
+}
+
+ReactDOM.render(React.createElement(App), document.getElementById('app'));
+</script>
+</body>
+</html>
